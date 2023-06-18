@@ -73,11 +73,14 @@ struct MiMCDemo<'a, F: Field> {
 /// is used during paramgen and proving in order to
 /// synthesize the constraint system.
 impl<'a, F: Field> ConstraintSynthesizer<F> for MiMCDemo<'a, F> {
+    // STUDY: the cs argument is moved into the cs parameter
     fn generate_constraints(self, cs: ConstraintSystemRef<F>) -> Result<(), SynthesisError> {
         assert_eq!(self.constants.len(), MIMC_ROUNDS);
 
         // Allocate the first component of the preimage.
+        // STUDY: creates a R1CS representation for the first circuit input and add it to constraint system
         let mut xl_value = self.xl;
+        // STUDY: xl_value is duplicated by the closure because Option implements Copy
         let mut xl =
             cs.new_witness_variable(|| xl_value.ok_or(SynthesisError::AssignmentMissing))?;
 
@@ -92,6 +95,8 @@ impl<'a, F: Field> ConstraintSynthesizer<F> for MiMCDemo<'a, F> {
             let cs = ns.cs();
 
             // tmp = (xL + Ci)^2
+            // STUDY: field elements are basically BigInts plus traits to implement the field operations
+            //        BigInts in turn are basically arrays of 'N' usize elements to hold more than 64 bits
             let tmp_value = xl_value.map(|mut e| {
                 e.add_assign(&self.constants[i]);
                 e.square_in_place();
@@ -153,6 +158,8 @@ fn test_mimc_groth16() {
     let mut rng = ark_std::rand::rngs::StdRng::seed_from_u64(test_rng().next_u64());
 
     // Generate the MiMC round constants
+    // STUDY: type inferred by the use of 'constants' in the initialization of MiMCDemo::<Fr>
+    //        makes rng.gen() to use the BigInt impl of sample() fn from the Distribution trait
     let constants = (0..MIMC_ROUNDS).map(|_| rng.gen()).collect::<Vec<_>>();
 
     println!("Creating parameters...");
@@ -184,6 +191,7 @@ fn test_mimc_groth16() {
 
     for _ in 0..SAMPLES {
         // Generate a random preimage and compute the image
+        // STUDY: type inferred by the use xl, xr in the initialization of MiMCDemo down below
         let xl = rng.gen();
         let xr = rng.gen();
         let image = mimc(xl, xr, &constants);
@@ -194,6 +202,7 @@ fn test_mimc_groth16() {
         {
             // Create an instance of our circuit (with the
             // witness)
+            // STUDY: type inferred by the use of &constants (array of 'Fr' elements) in the initialization
             let c = MiMCDemo {
                 xl: Some(xl),
                 xr: Some(xr),
