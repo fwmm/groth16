@@ -81,6 +81,8 @@ impl<'a, F: Field> ConstraintSynthesizer<F> for MiMCDemo<'a, F> {
         // STUDY: creates a R1CS representation for the first circuit input and add it to constraint system
         let mut xl_value = self.xl;
         // STUDY: xl_value is duplicated by the closure because Option implements Copy
+        // STUDY: this puts the content of xl_value in the witness_assignement vector and returns a
+        // STUDY: Variable::Witness(i), where 'i' is the index on that vector
         let mut xl =
             cs.new_witness_variable(|| xl_value.ok_or(SynthesisError::AssignmentMissing))?;
 
@@ -191,7 +193,7 @@ fn test_mimc_groth16() {
 
     for _ in 0..SAMPLES {
         // Generate a random preimage and compute the image
-        // STUDY: type inferred by the use xl, xr in the initialization of MiMCDemo down below
+        // STUDY: type inferred by the use of xl, xr in the initialization of MiMCDemo down below
         let xl = rng.gen();
         let xr = rng.gen();
         let image = mimc(xl, xr, &constants);
